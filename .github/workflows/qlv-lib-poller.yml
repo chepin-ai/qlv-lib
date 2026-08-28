@@ -19,7 +19,9 @@ jobs:
           OTP_PHONE: ${{ vars.OTP_PHONE }}
           OTP_EMAIL1: ${{ vars.OTP_EMAIL1 }}
           OTP_EMAIL2: ${{ vars.OTP_EMAIL2 }}
-        run: python3 poller.py | tee receipts_last.jsonl
+        run: |
+          python3 poller.py 2>&1 | tee receipts_last.jsonl
+          echo "poller_exit=${{PIPESTATUS[0]}}" >> receipts_last.jsonl
       - name: push receipts
         run: |
           git config user.email "qlv-lib-ci@chepin-ai.local"; git config user.name "qlv-lib-ci"
