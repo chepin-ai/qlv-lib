@@ -1,8 +1,10 @@
 name: qlv-lib-poller
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/15 * * * *"  # 死手兜底(D-157): 主驱动=qf-beat事件道
   workflow_dispatch:
+  repository_dispatch:
+    types: [qf-beat]
 permissions: {contents: write}
 jobs:
   poll:
