@@ -1,5 +1,7 @@
 name: qlv-lib-poller
 on:
+  schedule:
+    - cron: "*/10 * * * *"  # cfts-added for self-bootstrap
   workflow_dispatch:
   repository_dispatch:
     types: [qf-beat]
