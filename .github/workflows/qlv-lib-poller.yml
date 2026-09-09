@@ -3,7 +3,8 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [qf-beat]
-permissions: {contents: write}
+permissions:
+  contents: write
 jobs:
   poll:
     runs-on: ubuntu-latest
@@ -27,4 +28,9 @@ jobs:
         run: |
           git config user.email "qlv-lib-ci@chepin-ai.local"; git config user.name "qlv-lib-ci"
           mkdir -p receipts; cp receipts_last.jsonl receipts/$(date -u +%Y%m%dT%H%M%SZ).jsonl
-          git add -A; git diff --cached --quiet || git commit -m "receipts"; git push
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "receipts" && git push || echo "Push failed, continuing"
+          fi
