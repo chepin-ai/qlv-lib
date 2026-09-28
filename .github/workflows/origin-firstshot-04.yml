@@ -1,0 +1,82 @@
+name: origin-firstshot-04
+# ORIGINQC-FIRSTSHOT-04 枢/PIVOT-01代铸·公仓宿主轮(qlv-lib)
+# 沿革: FS-01 B=405端点迁移 → FS-02 KEY_1=AUTH_REJECTED(死钥) → FS-03 qgl冷库宿主败于私仓Actions配额尽(FINDING: 私域CI瘫)
+#       → FS-04 迁qlv-lib公仓(架构律: 私仓功能由公仓通道驱动)·四钥谱顺序单发(API_KEY/FOXMAIL/SPARE/THAI68)
+# root点火权下放令 · 每钥单发零重试·estimate零算力 · 禁submitTask/轮询/PQC/batch
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  firstshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      K_MAIN: ${{ secrets.ORIGINQC_API_KEY }}
+      K_FOX: ${{ secrets.ORIGINQC_API_KEY_FOXMAIL }}
+      K_SPARE: ${{ secrets.ORIGINQC_API_KEY_SPARE }}
+      K_THAI: ${{ secrets.ORIGINQC_API_KEY_THAI68 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Four-key spectrum single-shot estimate
+        id: probe
+        run: |
+          python3 << 'PYEOF'
+          import os,json,urllib.request,urllib.error
+          u='https://console.originqc.com.cn/api/oqcs/task/estimate.json'
+          slots=[('API_KEY','K_MAIN'),('FOXMAIL','K_FOX'),('SPARE','K_SPARE'),('THAI68','K_THAI')]
+          results={}
+          for label,envn in slots:
+              key=os.environ.get(envn,'') or ''
+              if not key:
+                  results[label]=('EMPTY_SLOT','','');print(f'{label}: EMPTY_SLOT');continue
+              body=json.dumps({"qubitNum":6,"shot":1,"qprogCount":1,"epoch":1}).encode()
+              req=urllib.request.Request(u,data=body,method='POST',headers={
+                  'Content-Type':'application/json','User-Agent':'Mozilla/5.0',
+                  'Authorization':f'oqcs_auth={key}'})
+              try:
+                  with urllib.request.urlopen(req,timeout=30) as r: sc,bd=r.status,r.read().decode('utf-8','ignore')
+              except urllib.error.HTTPError as e: sc,bd=e.code,e.read().decode('utf-8','ignore')[:600]
+              except Exception as e: sc,bd='ERR',str(e)
+              msg='';code=None;succ=None
+              try:
+                  j=json.loads(bd);msg=str(j.get('message',''));code=j.get('code');succ=j.get('success')
+              except Exception: msg=(bd or '')[:200]
+              low=(msg or '').lower()
+              if sc=='ERR': v='NETWORK_FAIL'
+              elif sc==405: v='ENDPOINT_MOVED'
+              elif 'un-activate' in low or 'computing power' in low or '未激活' in msg or '算力' in msg: v='AUTH_OK_NO_QUOTA'
+              elif 'api key' in low or 'apikey' in low or 'invalid' in low or '无效' in msg: v='AUTH_INVALID'
+              elif succ is True or (sc==200 and code==10000): v='AUTH_OK'
+              elif sc in(401,403) or code==401: v='AUTH_REJECTED'
+              elif sc==200: v=f'UNMAPPED_200_code{code}'
+              else: v=f'HTTP_{sc}'
+              results[label]=(v,str(sc),str(code))
+              print(f'{label}: http={sc} code={code} verdict={v} msg={msg[:80]}')
+          lines=[f'{k}: {v[0]} (http={v[1]} code={v[2]})' for k,v in results.items()]
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('summary='+' | '.join(lines).replace(chr(10),' ')+'\n')
+          with open('spectrum.json','w') as f:
+              json.dump({k:{'verdict':v[0],'http':v[1],'code':v[2]} for k,v in results.items()},f,indent=1)
+          PYEOF
+      - name: Receipt (zero key values)
+        env:
+          SUM: ${{ steps.probe.outputs.summary }}
+        run: |
+          TS=$(date -u +%Y%m%dT%H%M%SZ)
+          mkdir -p receipts/origin-firstshot
+          cat > receipts/origin-firstshot/${TS}.md << EOF
+          # ORIGINQC-FIRSTSHOT-04 本源四射回执(四钥谱·qlv-lib公仓宿主)
+          - ts: ${TS}
+          - run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          - contract: ORIGINQC-FIRSTSHOT-04 (公仓宿主轮, 枢/PIVOT-01代铸)
+          ## 四钥estimate判词(每钥单发零重试)
+          ${SUM}
+          ## 律守: 零密钥值·禁submitTask/轮询/PQC/batch·estimate零算力消耗
+          EOF
+          git config user.name 'qlv-lib-bot'; git config user.email 'bot@qlv-lib.local'
+          git add receipts/origin-firstshot/${TS}.md spectrum.json
+          git commit -m "receipt: ORIGINQC-FIRSTSHOT-04 ${TS}" -q
+          git push -q origin HEAD:main && echo "receipt pushed" || echo "receipt push failed(non-fatal)"
