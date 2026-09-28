@@ -1,0 +1,22 @@
+{
+ "API_KEY": {
+  "verdict": "AUTH_REJECTED",
+  "http": "200",
+  "code": "401"
+ },
+ "FOXMAIL": {
+  "verdict": "AUTH_REJECTED",
+  "http": "200",
+  "code": "401"
+ },
+ "SPARE": {
+  "verdict": "AUTH_REJECTED",
+  "http": "200",
+  "code": "401"
+ },
+ "THAI68": {
+  "verdict": "AUTH_REJECTED",
+  "http": "200",
+  "code": "401"
+ }
+}
