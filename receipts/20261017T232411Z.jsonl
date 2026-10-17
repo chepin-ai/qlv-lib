@@ -1,0 +1,2 @@
+{"wo_id": "WO-QLV-0001", "ts": "2026-10-17T23:24:10Z", "result": {"AI_FULL_PAT": "present", "AI_FULL_APP_ID": "present", "AI_FULL_APP_KEY": "present", "OTP_PHONE": "present", "OTP_EMAIL1": "present", "OTP_EMAIL2": "present"}, "artifact_sha256": "335b2126dd87e852"}
+poller_exit=0
